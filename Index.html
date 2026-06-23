@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FIFO Fit">
+<meta name="theme-color" content="#3b82f6">
+<meta name="msapplication-TileColor" content="#0d0f12">
+<title>FIFO Fit Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg:        #0d0f12;
+    --surface:   #161a1f;
+    --card:      #1e2329;
+    --border:    #2a3040;
+    --accent:    #3b82f6; /* Modern Blue */
+    --accent-dk: #1d4ed8;
+    --danger:    #e05a4e;
+    --ok:        #10b981; /* Success Green */
+    --ok-dk:     #047857;
+    --text:      #e8ecf0;
+    --muted:     #7a8694;
+    --mono:      'DM Mono', monospace;
+    --sans:      'Inter', system-ui, sans-serif;
+    --radius:    18px;
+    --gap:       20px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--sans); -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  body { display: flex; flex-direction: column; min-height: 100dvh; }
+
+  /* ── SPLASH ─────────────────────────────────────────────── */
+  #splash {
+    position: fixed; inset: 0; z-index: 999; background: #0d0f12;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; opacity: 1; transition: opacity 0.55s ease;
+    pointer-events: all; overflow: hidden;
+  }
+  #splash.fade-out { opacity: 0; pointer-events: none; }
+  #splash::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none;
+  }
+  #splash::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-60%); width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .splash-corner {
+    position: absolute; width: 28px; height: 28px;
+    border-color: rgba(59,130,246,0.2); border-style: solid;
+    animation: splashFadeIn 0.6s ease 0.1s both;
+  }
+  .splash-corner.tl { top:20px;  left:20px;  border-width:2px 0 0 2px; }
+  .splash-corner.tr { top:20px;  right:20px; border-width:2px 2px 0 0; }
+  .splash-corner.bl { bottom:20px; left:20px;  border-width:0 0 2px 2px; }
+  .splash-corner.br { bottom:20px; right:20px; border-width:0 2px 2px 0; }
+  .splash-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--accent);
+    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 99px; padding: 5px 14px; margin-bottom: 30px;
+    animation: splashFadeUp 0.5s ease 0.15s both;
+  }
+  .splash-icon {
+    font-size: 58px; line-height: 1; margin-bottom: 22px;
+    animation: splashFadeUp 0.5s ease 0.25s both, splashGlow 2s ease-in-out 0.8s infinite alternate;
+    position: relative; z-index: 1;
+  }
+  .splash-title {
+    font-family: var(--mono); font-size: clamp(30px,8.5vw,42px); font-weight: 500;
+    letter-spacing: -0.02em; color: var(--text); line-height: 1;
+    animation: splashFadeUp 0.5s ease 0.35s both; position: relative; z-index: 1;
+  }
+  .splash-title .accent { color: var(--accent); }
+  .splash-tagline {
+    font-family: var(--sans); font-size: 14px; color: var(--muted);
+    letter-spacing: 0.05em; margin-top: 10px;
+    animation: splashFadeUp 0.5s ease 0.45s both; position: relative; z-index: 1;
+  }
+  .splash-bar-wrap {
+    margin-top: 56px; width: min(260px,70vw); height: 3px;
+    background: rgba(42,48,64,0.8); border-radius: 99px; overflow: hidden;
+    animation: splashFadeIn 0.4s ease 0.5s both; position: relative; z-index: 1;
+  }
+  .splash-bar-fill {
+    height: 100%; width: 0%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent-dk), var(--accent), #93c5fd);
+    animation: splashLoad 1.7s cubic-bezier(0.25,0.46,0.45,0.94) 0.55s forwards;
+    box-shadow: 0 0 8px rgba(59,130,246,0.5);
+  }
+  .splash-loading-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #3a4450; margin-top: 10px;
+    animation: splashFadeIn 0.4s ease 0.65s both; position: relative; z-index: 1;
+  }
+  @keyframes splashFadeUp  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes splashFadeIn  { from{opacity:0} to{opacity:1} }
+  @keyframes splashLoad    { 0%{width:0%} 50%{width:70%} 80%{width:90%} 100%{width:100%} }
+  @keyframes splashGlow {
+    from { filter: drop-shadow(0 0 10px rgba(59,130,246,0.2)); }
+    to   { filter: drop-shadow(0 0 28px rgba(59,130,246,0.55)); }
+  }
+
+  /* ── APP WRAPPER ────────────────────────────────────────── */
+  #app-wrapper { display: flex; flex-direction: column; min-height: 100dvh; opacity: 0; transition: opacity 0.45s ease; }
+  #app-wrapper.visible { opacity: 1; }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 10;
+  }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .logo span { color: var(--muted); }
+  .header-actions { display: flex; gap: 8px; }
+  .settings-btn {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 11px 14px; font-family: var(--sans);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s; min-height: 46px; display: flex; align-items: center; gap: 6px;
+  }
+  .settings-btn:active { background: var(--border); }
+
+  /* Status Badges */
+  .status-badge {
+    padding: 4px 10px; border-radius: 8px; font-family: var(--mono); font-size: 11px;
+    font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .status-badge.swing { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+  .status-badge.rr { background: rgba(16,185,129,0.15); color: var(--ok); border: 1px solid rgba(16,185,129,0.3); }
+
+  /* ── MAIN SCROLL AREA ───────────────────────────────────── */
+  main {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 20px 14px 80px; display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* ── MOTIVATIONAL BANNER ─────────────────────────────────── */
+  .motive-banner {
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent); border-radius: 14px;
+    padding: 14px 18px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .motive-text { font-size: 15px; font-weight: 600; color: var(--text); }
+  .motive-tagline { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ── DASHBOARD STATS ────────────────────────────────────── */
+  .dash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .dash-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px 14px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .dash-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .dash-val {
+    font-family: var(--mono); font-size: 28px; font-weight: 500;
+    color: var(--text); letter-spacing: -0.01em; line-height: 1.1;
+  }
+  .dash-val.blue { color: var(--accent); }
+  .dash-val.green { color: var(--ok); }
+  
+  /* Weekly goal progress card */
+  .goal-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 18px 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .goal-card-header { display: flex; justify-content: space-between; align-items: center; }
+  .goal-title { font-size: 14px; font-weight: 700; }
+  .goal-pct { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ok); }
+  .progress-bar-wrap { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--ok)); transition: width 0.4s ease; width: 0%; }
+
+  /* ── NAVIGATION TABS ────────────────────────────────────── */
+  .nav-tabs {
+    display: flex; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 4px; gap: 4px;
+  }
+  .nav-tab-btn {
+    flex: 1; background: none; border: none; padding: 12px 8px; color: var(--muted);
+    font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+    border-radius: 10px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .nav-tab-btn.active { background: var(--card); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .nav-tab-icon { font-size: 16px; }
+
+  /* ── SECTION PANELS ─────────────────────────────────────── */
+  .section-panel { display: none; flex-direction: column; gap: 16px; }
+  .section-panel.active { display: flex; }
+  .panel-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+    padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .panel-card-title { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+
+  /* ── LOGGING INTERFACES ─────────────────────────────────── */
+  .checkin-row { display: flex; gap: 10px; align-items: center; }
+  .checkin-btn {
+    flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px;
+    transition: all 0.15s;
+  }
+  .checkin-btn.done { background: rgba(16,185,129,0.1); border-color: var(--ok); color: var(--ok); }
+  .checkin-btn:active { transform: scale(0.98); }
+
+  /* Habits list */
+  .habits-list { display: flex; flex-direction: column; gap: 10px; }
+  .habit-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 12px 14px; border-radius: 12px; cursor: pointer; transition: background 0.15s;
+  }
+  .habit-item:active { background: var(--border); }
+  .habit-info { display: flex; align-items: center; gap: 10px; }
+  .habit-icon { font-size: 18px; }
+  .habit-name { font-size: 14px; font-weight: 600; }
+  .habit-checkbox {
+    width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent;
+    transition: all 0.15s;
+  }
+  .habit-item.completed .habit-checkbox { background: var(--ok); border-color: var(--ok); color: #000; font-weight: bold; }
+  .habit-item.completed .habit-name { color: var(--muted); text-decoration: line-through; }
+
+  /* Manual numeric inputs */
+  .quick-log-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .input-box { display: flex; flex-direction: column; gap: 6px; }
+  .input-box label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; }
+  .input-field {
+    width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px; color: var(--text); padding: 12px; font-family: var(--mono);
+    font-size: 16px; outline: none; transition: border-color 0.15s; min-height: 48px;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  textarea.input-field { min-height: 80px; font-family: var(--sans); font-size: 14px; resize: none; }
+
+  /* ── CGM / GLUCOSE TRACKER ──────────────────────────────── */
+  .glucose-badge-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px; }
+  .glucose-badge {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .glucose-badge-lbl { font-family: var(--mono); font-size: 9px; text-transform: uppercase; color: var(--muted); }
+  .glucose-badge-val { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--text); }
+  .glucose-badge-val.accent { color: var(--accent); }
+  
+  .glucose-disclaimer {
+    font-size: 11px; color: var(--muted); line-height: 1.4; border-top: 1px solid var(--border);
+    padding-top: 10px; margin-top: 4px; display: flex; gap: 6px; align-items: flex-start;
+  }
+
+  /* Tag selectors */
+  .tag-selector { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-pill {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tag-pill.active { background: rgba(59,130,246,0.15); border-color: var(--accent); color: var(--accent); }
+
+  /* Submit action buttons */
+  .action-btn {
+    width: 100%; background: var(--accent); color: #000; border: none; border-radius: 12px;
+    padding: 14px; font-family: var(--sans); font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: background 0.15s, transform 0.1s; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .action-btn:active { background: var(--accent-dk); transform: scale(0.98); }
+  .action-btn.secondary { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .action-btn.secondary:active { background: var(--surface); }
+
+  /* ── OVERLAY PANEL (Settings) ───────────────────────────── */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72); z-index: 100; align-items: flex-end;
+  }
+  .overlay.open { display: flex; }
+  .panel {
+    background: var(--surface); border-top: 1px solid var(--border);
+    border-radius: 26px 26px 0 0; width: 100%; max-height: 92dvh;
+    overflow-y: auto; padding: 8px 0 48px; animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .panel-handle {
+    width: 40px; height: 4px; background: var(--border);
+    border-radius: 99px; margin: 14px auto 22px;
+  }
+  .panel-title {
+    font-size: 20px; font-weight: 700; padding: 0 22px 20px;
+    border-bottom: 1px solid var(--border); margin-bottom: 22px;
+  }
+  .form-group { padding: 0 22px; margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 600; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .p-divider { height: 1px; background: var(--border); margin: 6px 22px 22px; }
+
+  /* ── HISTORY / RECENT LOGS ──────────────────────────────── */
+  .history-list { display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; }
+  .history-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .history-item-details { display: flex; flex-direction: column; gap: 2px; }
+  .history-item-title { font-size: 14px; font-weight: 600; }
+  .history-item-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .history-item-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent); }
+
+  .clear-btn {
+    display: block; width: calc(100% - 44px); margin: 14px 22px 0;
+    background: transparent; color: var(--danger); border: 1.5px solid var(--danger);
+    border-radius: 14px; padding: 16px; font-family: var(--sans); font-size: 16px;
+    font-weight: 600; cursor: pointer; min-height: 54px; transition: background 0.15s;
+    text-align: center; text-decoration: none;
+  }
+  .clear-btn:active { background: rgba(224,90,78,0.1); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ══ SPLASH ══════════════════════════════════════════════ -->
+<div id="splash" aria-hidden="true">
+  <div class="splash-corner tl"></div>
+  <div class="splash-corner tr"></div>
+  <div class="splash-corner bl"></div>
+  <div class="splash-corner br"></div>
+  <div class="splash-badge">FIFO Fit Companion</div>
+  <div class="splash-icon">🏋️</div>
+  <div class="splash-title">FIFO <span class="accent">Fit</span></div>
+  <div class="splash-tagline">“Small wins every day, mate.”</div>
+  <div class="splash-bar-wrap"><div class="splash-bar-fill"></div></div>
+  <div class="splash-loading-label">Initialising Tracker&hellip;</div>
+</div>
+
+<!-- ══ APP ═════════════════════════════════════════════════ -->
+<div id="app-wrapper">
+
+  <header>
+    <div class="logo">FIFO <span>// Fit Tracker</span></div>
+    <div class="header-actions">
+      <span id="roster-status-badge" class="status-badge swing">Loading...</span>
+      <button class="settings-btn" onclick="openSettings()">⚙&nbsp; Settings</button>
+    </div>
+  </header>
+
+  <main id="main-content">
+    
+    <!-- Rotating Motivational Banner -->
+    <div class="motive-banner" id="motive-banner">
+      <span class="motive-text" id="motive-text">"Small wins every day, mate."</span>
+      <span class="motive-tagline">Daily Focus</span>
+    </div>
+
+    <!-- Top Dashboard Stats -->
+    <div class="dash-grid">
+      <div class="dash-card">
+        <span class="dash-label">🏋️ Workouts This Week</span>
+        <span class="dash-val blue" id="dash-workouts">0</span>
+      </div>
+      <div class="dash-card">
+        <span class="dash-label">🚶 Walks This Week</span>
+        <span class="dash-val blue" id="dash-walks">0</span>
+      </div>
+      <div class="dash-card">
+        <span class="dash-label">🔥 Current Streak</span>
+        <span class="dash-val green" id="dash-streak">0 days</span>
+      </div>
+      <div class="dash-card">
+        <span class="dash-label">📈 Total Activity Days</span>
+        <span class="dash-val green" id="dash-activity">0</span>
+      </div>
+    </div>
+
+    <!-- Weekly Goal Completion -->
+    <div class="goal-card">
+      <div class="goal-card-header">
+        <span class="goal-title">Weekly Habit Completion</span>
+        <span class="goal-pct" id="weekly-goal-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="weekly-goal-bar" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" onclick="switchTab('daily')">
+        <span class="nav-tab-icon">📝</span>
+        <span>Daily Log</span>
+      </button>
+      <button class="nav-tab-btn" onclick="switchTab('health')">
+        <span class="nav-tab-icon">🩸</span>
+        <span>Health &amp; CGM</span>
+      </button>
+      <button class="nav-tab-btn" onclick="switchTab('trends')">
+        <span class="nav-tab-icon">📊</span>
+        <span>Trends</span>
+      </button>
+    </nav>
+
+    <!-- ══ TAB 1: DAILY LOG ══════════════════════════════════ -->
+    <div id="tab-daily" class="section-panel active">
+      
+      <!-- Quick Check-in -->
+      <div class="checkin-row">
+        <button id="checkin-btn" class="checkin-btn" onclick="toggleDailyCheckIn()">
+          <span>✅</span> <span id="checkin-btn-text">Log Daily Check-in</span>
+        </button>
+      </div>
+
+      <!-- Habit Tracker Checklist -->
+      <div class="panel-card">
+        <span class="panel-card-title">🚀 Daily Habits</span>
+        <div class="habits-list">
+          <div class="habit-item" id="habit-gym" onclick="toggleHabit('gym')">
+            <div class="habit-info">
+              <span class="habit-icon">🏋️</span>
+              <span class="habit-name">Hit the Gym</span>
+            </div>
+            <div class="habit-checkbox">✓</div>
+          </div>
+          <div class="habit-item" id="habit-walk" onclick="toggleHabit('walk')">
+            <div class="habit-info">
+              <span class="habit-icon">🚶</span>
+              <span class="habit-name">Daily Active Walk</span>
+            </div>
+            <div class="habit-checkbox">✓</div>
+          </div>
+          <div class="habit-item" id="habit-water" onclick="toggleHabit('water')">
+            <div class="habit-info">
+              <span class="habit-icon">💧</span>
+              <span class="habit-name">Hydration Goal (3L+)</span>
+            </div>
+            <div class="habit-checkbox">✓</div>
+          </div>
+          <div class="habit-item" id="habit-stretching" onclick="toggleHabit('stretching')">
+            <div class="habit-info">
+              <span class="habit-icon">🧘</span>
+              <span class="habit-name">Stretching / Mobility</span>
+            </div>
+            <div class="habit-checkbox">✓</div>
+          </div>
+          <div class="habit-item" id="habit-recovery" onclick="toggleHabit('recovery')">
+            <div class="habit-info">
+              <span class="habit-icon">💤</span>
+              <span class="habit-name">Recovery &amp; Deep Sleep</span>
+            </div>
+            <div class="habit-checkbox">✓</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Entry -->
+      <div class="panel-card">
+        <span class="panel-card-title">📈 Today's Activity Details</span>
+        <div class="quick-log-row">
+          <div class="input-box">
+            <label for="input-steps">Step Count</label>
+            <input type="number" id="input-steps" class="input-field" placeholder="e.g. 10000" onchange="saveDailyMetrics()">
+          </div>
+          <div class="input-box">
+            <label for="input-distance">Distance (km)</label>
+            <input type="number" id="input-distance" class="input-field" step="0.1" placeholder="e.g. 7.5" onchange="saveDailyMetrics()">
+          </div>
+        </div>
+        <div class="input-box">
+          <label for="input-daily-notes">Short Log Notes</label>
+          <textarea id="input-daily-notes" class="input-field" placeholder="e.g. Legs session felt heavy. Shift was long but managed my water." onchange="saveDailyMetrics()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB 2: HEALTH & CGM ═══════════════════════════════ -->
+    <div id="tab-health" class="section-panel">
+      
+      <!-- Manual CGM / Glucose Tracker -->
+      <div class="panel-card">
+        <span class="panel-card-title">🩸 Manual Glucose Tracker</span>
+        
+        <div class="glucose-badge-grid">
+          <div class="glucose-badge">
+            <span class="glucose-badge-lbl">Latest Reading</span>
+            <span class="glucose-badge-val accent" id="gl-latest">-- mmol/L</span>
+          </div>
+          <div class="glucose-badge">
+            <span class="glucose-badge-lbl">Daily Average</span>
+            <span class="glucose-badge-val" id="gl-avg">-- mmol/L</span>
+          </div>
+          <div class="glucose-badge">
+            <span class="glucose-badge-lbl">Daily Highest</span>
+            <span class="glucose-badge-val" id="gl-high">-- mmol/L</span>
+          </div>
+          <div class="glucose-badge">
+            <span class="glucose-badge-lbl">Daily Lowest</span>
+            <span class="glucose-badge-val" id="gl-low">-- mmol/L</span>
+          </div>
+        </div>
+
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 4px;">
+          Trend Today: <strong id="gl-trend" style="color: var(--text);">--</strong>
+        </div>
+
+        <div class="p-divider" style="margin: 8px 0;"></div>
+
+        <!-- Glucose Entry Form -->
+        <div class="quick-log-row" style="grid-template-columns: 1.2fr 1fr;">
+          <div class="input-box">
+            <label for="input-glucose">Reading (mmol/L)</label>
+            <input type="number" id="input-glucose" class="input-field" step="0.1" placeholder="e.g. 5.4">
+          </div>
+          <div class="input-box">
+            <label for="input-glucose-type">Reading Type</label>
+            <select id="input-glucose-type" class="input-field" style="background-color: var(--surface);">
+              <option value="Fasting">Fasting</option>
+              <option value="Before Meal">Before Meal</option>
+              <option value="After Meal">After Meal</option>
+              <option value="Bedtime">Bedtime</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label>Optional Context tags</label>
+          <div class="tag-selector" id="glucose-tags">
+            <span class="tag-pill" onclick="toggleContextTag(this, 'Food')">Food</span>
+            <span class="tag-pill" onclick="toggleContextTag(this, 'Walking')">Walking</span>
+            <span class="tag-pill" onclick="toggleContextTag(this, 'Gym')">Gym</span>
+            <span class="tag-pill" onclick="toggleContextTag(this, 'Stress')">Stress</span>
+            <span class="tag-pill" onclick="toggleContextTag(this, 'Sleep')">Sleep</span>
+            <span class="tag-pill" onclick="toggleContextTag(this, 'Dawn Phenomenon')">Dawn Phenom</span>
+          </div>
+        </div>
+
+        <button class="action-btn" onclick="saveGlucoseLog()">💾 Save Reading</button>
+
+        <div class="glucose-disclaimer">
+          <span>⚠️</span>
+          <span>Disclaimer: This is a manual self-tracking utility only and does not constitute medical advice. No automated sensor syncing is performed in V1.</span>
+        </div>
+      </div>
+
+      <!-- Health & Body Tracking -->
+      <div class="panel-card">
+        <span class="panel-card-title">⚖️ Body Metrics &amp; Health</span>
+        <div class="quick-log-row">
+          <div class="input-box">
+            <label for="input-weight">Weight (kg)</label>
+            <input type="number" id="input-weight" class="input-field" step="0.1" placeholder="e.g. 84.5">
+          </div>
+          <div class="input-box">
+            <label for="input-waist">Waist (cm)</label>
+            <input type="number" id="input-waist" class="input-field" step="0.5" placeholder="e.g. 92.0">
+          </div>
+        </div>
+        <div class="input-box">
+          <label for="input-health-notes">Health &amp; Recovery Notes</label>
+          <textarea id="input-health-notes" class="input-field" placeholder="Notes on fasting state, sleep quality, etc..."></textarea>
+        </div>
+        <button class="action-btn" onclick="saveHealthMetrics()">💾 Save Body Metrics</button>
+      </div>
+    </div>
+
+    <!-- ══ TAB 3: TRENDS ═════════════════════════════════════ -->
+    <div id="tab-trends" class="section-panel">
+      
+      <!-- Weekly Trend Display -->
+      <div class="panel-card">
+        <span class="panel-card-title">📊 7-Day Physical Summary</span>
+        <div id="weekly-trends-render" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- JS Dynamic render of daily activity logs -->
+        </div>
+      </div>
+
+      <!-- Glucose Log History -->
+      <div class="panel-card">
+        <span class="panel-card-title">🩸 Recent Glucose Logs</span>
+        <div class="history-list" id="glucose-history-list">
+          <!-- JS Dynamic insertion of logs -->
+        </div>
+      </div>
+
+      <!-- Health Log History -->
+      <div class="panel-card">
+        <span class="panel-card-title">⚖️ Recent Health &amp; Weight Logs</span>
+        <div class="history-list" id="health-history-list">
+          <!-- JS Dynamic insertion of health logs -->
+        </div>
+      </div>
+
+      <!-- Achievements / Personal Best Section -->
+      <div class="panel-card">
+        <span class="panel-card-title">🏆 Personal Bests</span>
+        <div id="pb-list" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- JS Dynamic lists -->
+        </div>
+        <div class="p-divider" style="margin: 8px 0;"></div>
+        <div class="input-box">
+          <label for="input-pb-title">New achievement / pb</label>
+          <input type="text" id="input-pb-title" class="input-field" placeholder="e.g. 10km run under 50m, 140kg squat">
+        </div>
+        <button class="action-btn" onclick="addPersonalBest()">🏆 Add Achievement</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══ SETTINGS OVERLAY ════════════════════════════════════ -->
+  <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+    <div class="panel" id="settings-panel">
+      <div class="panel-handle"></div>
+      <div class="panel-title">Settings &amp; Configuration</div>
+      
+      <!-- Swing / Roster details -->
+      <div class="form-group">
+        <label>Current Status Badge</label>
+        <select id="setting-roster-mode" class="input-field" style="background-color: var(--card);" onchange="updateRosterModeConfig()">
+          <option value="swing">⛏️ On Swing (Working)</option>
+          <option value="rr">🏠 On R&amp;R (At Home)</option>
+        </select>
+      </div>
+
+      <div class="p-divider"></div>
+
+      <!-- Manual storage clearing for debugging or user restart -->
+      <div class="form-group">
+        <label>Data Management</label>
+        <button class="clear-btn" style="width: 100%; margin: 10px 0 0;" onclick="clearAllData()">⚠️ Clear All Saved Data</button>
+      </div>
+
+      <button class="action-btn secondary" style="width: calc(100% - 44px); margin: 14px 22px 0;" onclick="closeSettings()">Close Settings</button>
+    </div>
+  </div>
+
+</div><!-- #app-wrapper -->
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   STORAGE & DATA STRUCTS
+══════════════════════════════════════════════════════════ */
+var DAILY_LOGS_KEY = 'fifofit_daily_v1';
+var GLUCOSE_LOGS_KEY = 'fifofit_glucose_v1';
+var HEALTH_LOGS_KEY = 'fifofit_health_v1';
+var ROSTER_KEY = 'fifofit_roster_v1';
+var PB_KEY = 'fifofit_pb_v1';
+
+function loadData(key, defaultVal) {
+  try {
+    var raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : defaultVal;
+  } catch(e) {
+    return defaultVal;
+  }
+}
+
+function saveData(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch(e) {
+    console.error("Storage failed:", e);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DATE UTILITIES
+══════════════════════════════════════════════════════════ */
+function getTodayStr() {
+  var d = new Date();
+  var month = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + month + '-' + day;
+}
+
+function formatDateDisplay(dateStr) {
+  var p = dateStr.split('-').map(Number);
+  var d = new Date(p[0], p[1] - 1, p[2]);
+  return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOTIVATIONAL MESSAGES
+══════════════════════════════════════════════════════════ */
+var MOTIVATIONS = [
+  "Small wins every day, mate.",
+  "12 hours on shift is tough. A 30 min investment in your health is the pay-off.",
+  "R&R is for strategic recovery, not breaking habits.",
+  "Stay focused on site, stay balanced back home.",
+  "A walk is the easiest way to reset stress levels after shift.",
+  "Hydration is fuel on site. Keep sipping, mate.",
+  "No-one regretted going to the gym. Get down there.",
+  "Control the controllables: your effort, your diet, your sleep.",
+  "Be the worker who returns from swing stronger, not stiffer."
+];
+
+function selectDailyMessage() {
+  var d = new Date();
+  var idx = (d.getFullYear() + d.getMonth() + d.getDate()) % MOTIVATIONS.length;
+  var banner = document.getElementById('motive-text');
+  if (banner) banner.textContent = `"${MOTIVATIONS[idx]}"`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════════════════════ */
+function switchTab(tabId) {
+  document.querySelectorAll('.nav-tab-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+  document.querySelectorAll('.section-panel').forEach(function(panel) {
+    panel.classList.remove('active');
+  });
+
+  // Find index of click to make correct tab button active
+  var tabBtns = Array.from(document.querySelectorAll('.nav-tab-btn'));
+  if (tabId === 'daily') tabBtns[0].classList.add('active');
+  if (tabId === 'health') tabBtns[1].classList.add('active');
+  if (tabId === 'trends') tabBtns[2].classList.add('active');
+
+  var targetPanel = document.getElementById('tab-' + tabId);
+  if (targetPanel) targetPanel.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════════════
+   SETTINGS & ROSTER CONFIG
+══════════════════════════════════════════════════════════ */
+function openSettings() {
+  var cfg = loadData(ROSTER_KEY, { mode: 'swing' });
+  document.getElementById('setting-roster-mode').value = cfg.mode;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('overlay')) {
+    closeSettings();
+  }
+}
+
+function updateRosterModeConfig() {
+  var mode = document.getElementById('setting-roster-mode').value;
+  saveData(ROSTER_KEY, { mode: mode });
+  renderRosterBadge();
+}
+
+function renderRosterBadge() {
+  var cfg = loadData(ROSTER_KEY, { mode: 'swing' });
+  var badge = document.getElementById('roster-status-badge');
+
+  if (badge) {
+    if (cfg.mode === 'swing') {
+      badge.textContent = "⛏️ On Swing";
+      badge.className = "status-badge swing";
+    } else {
+      badge.textContent = "🏠 On R&R";
+      badge.className = "status-badge rr";
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   HABIT TRACKING & CHECK-IN
+══════════════════════════════════════════════════════════ */
+function toggleDailyCheckIn() {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+  
+  if (!logs[todayStr]) {
+    logs[todayStr] = { checkIn: false, habits: {}, steps: null, distance: null, notes: "" };
+  }
+  
+  logs[todayStr].checkIn = !logs[todayStr].checkIn;
+  saveData(DAILY_LOGS_KEY, logs);
+  updateCheckInUI();
+  calculateDashboard();
+}
+
+function updateCheckInUI() {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+  var btn = document.getElementById('checkin-btn');
+  var text = document.getElementById('checkin-btn-text');
+
+  if (logs[todayStr] && logs[todayStr].checkIn) {
+    btn.classList.add('done');
+    text.textContent = "Checked-In For Today";
+  } else {
+    btn.classList.remove('done');
+    text.textContent = "Log Daily Check-in";
+  }
+}
+
+function toggleHabit(habitName) {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+
+  if (!logs[todayStr]) {
+    logs[todayStr] = { checkIn: false, habits: {}, steps: null, distance: null, notes: "" };
+  }
+  if (!logs[todayStr].habits) {
+    logs[todayStr].habits = {};
+  }
+
+  var isDone = !!logs[todayStr].habits[habitName];
+  logs[todayStr].habits[habitName] = !isDone;
+
+  saveData(DAILY_LOGS_KEY, logs);
+  updateHabitsUI();
+  calculateDashboard();
+}
+
+function updateHabitsUI() {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+  var habits = ['gym', 'walk', 'water', 'stretching', 'recovery'];
+
+  habits.forEach(function(h) {
+    var el = document.getElementById('habit-' + h);
+    var done = false;
+    if (logs[todayStr] && logs[todayStr].habits && logs[todayStr].habits[h]) {
+      done = true;
+    }
+    if (el) {
+      if (done) {
+        el.classList.add('completed');
+      } else {
+        el.classList.remove('completed');
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   MANUAL DETAILS LOGGING
+══════════════════════════════════════════════════════════ */
+function saveDailyMetrics() {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+
+  if (!logs[todayStr]) {
+    logs[todayStr] = { checkIn: false, habits: {}, steps: null, distance: null, notes: "" };
+  }
+
+  logs[todayStr].steps = parseInt(document.getElementById('input-steps').value, 10) || null;
+  logs[todayStr].distance = parseFloat(document.getElementById('input-distance').value) || null;
+  logs[todayStr].notes = document.getElementById('input-daily-notes').value || "";
+
+  saveData(DAILY_LOGS_KEY, logs);
+  calculateDashboard();
+}
+
+function loadDailyMetricsUI() {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+
+  if (logs[todayStr]) {
+    document.getElementById('input-steps').value = logs[todayStr].steps || "";
+    document.getElementById('input-distance').value = logs[todayStr].distance || "";
+    document.getElementById('input-daily-notes').value = logs[todayStr].notes || "";
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD CALCULATIONS
+══════════════════════════════════════════════════════════ */
+function calculateDashboard() {
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var todayStr = getTodayStr();
+  
+  // Get start of the current week (ISO Monday)
+  var curr = new Date();
+  var first = curr.getDate() - curr.getDay() + (curr.getDay() === 0 ? -6 : 1); 
+  var firstday = new Date(curr.setDate(first));
+  firstday.setHours(0,0,0,0);
+
+  var workoutsThisWeek = 0;
+  var walksThisWeek = 0;
+  var totalActivityDays = 0;
+  var totalHabitTasks = 0;
+  var completedHabitTasks = 0;
+
+  var streakCount = 0;
+  var checkingDate = new Date();
+  
+  // 1. Calculate Streak (consecutive checking logs where active/checked)
+  while (true) {
+    var year = checkingDate.getFullYear();
+    var month = String(checkingDate.getMonth() + 1).padStart(2, '0');
+    var day = String(checkingDate.getDate()).padStart(2, '0');
+    var checkStr = year + '-' + month + '-' + day;
+    
+    var log = logs[checkStr];
+    if (log && (log.checkIn || (log.habits && Object.values(log.habits).some(Boolean)))) {
+      streakCount++;
+      checkingDate.setDate(checkingDate.getDate() - 1);
+    } else {
+      // If we miss today and check yesterday, don't break the streak unless they missed yesterday too
+      if (checkStr === todayStr && streakCount === 0) {
+        checkingDate.setDate(checkingDate.getDate() - 1);
+        continue;
+      }
+      break;
+    }
+  }
+
+  // 2. Loop all logs for Weekly counters & general counts
+  for (var key in logs) {
+    if (logs.hasOwnProperty(key)) {
+      var log = logs[key];
+      var p = key.split('-').map(Number);
+      var logDate = new Date(p[0], p[1] - 1, p[2]);
+      
+      var isActivityDay = log.checkIn || (log.habits && Object.values(log.habits).some(Boolean)) || log.steps || log.distance;
+      if (isActivityDay) totalActivityDays++;
+
+      if (logDate >= firstday) {
+        if (log.habits && log.habits.gym) workoutsThisWeek++;
+        if (log.habits && log.habits.walk) walksThisWeek++;
+
+        // Habit statistics for progress bar
+        var habits = ['gym', 'walk', 'water', 'stretching', 'recovery'];
+        habits.forEach(function(h) {
+          totalHabitTasks++;
+          if (log.habits && log.habits[h]) completedHabitTasks++;
+        });
+      }
+    }
+  }
+
+  // Set default weekly completion logic
+  var weeklyPct = totalHabitTasks > 0 ? Math.round((completedHabitTasks / totalHabitTasks) * 100) : 0;
+
+  // DOM Updates
+  document.getElementById('dash-workouts').textContent = workoutsThisWeek;
+  document.getElementById('dash-walks').textContent = walksThisWeek;
+  document.getElementById('dash-streak').textContent = streakCount + (streakCount === 1 ? ' day' : ' days');
+  document.getElementById('dash-activity').textContent = totalActivityDays;
+  document.getElementById('weekly-goal-pct').textContent = weeklyPct + "%";
+  document.getElementById('weekly-goal-bar').style.width = weeklyPct + "%";
+
+  renderTrendsTab();
+}
+
+/* ══════════════════════════════════════════════════════════
+   MANUAL GLUCOSE LOGGING
+══════════════════════════════════════════════════════════ */
+var selectedGlucoseTags = [];
+
+function toggleContextTag(pill, tagName) {
+  var idx = selectedGlucoseTags.indexOf(tagName);
+  if (idx > -1) {
+    selectedGlucoseTags.splice(idx, 1);
+    pill.classList.remove('active');
+  } else {
+    selectedGlucoseTags.push(tagName);
+    pill.classList.add('active');
+  }
+}
+
+function saveGlucoseLog() {
+  var value = parseFloat(document.getElementById('input-glucose').value);
+  var type = document.getElementById('input-glucose-type').value;
+  
+  if (isNaN(value) || value <= 0) {
+    alert("Please enter a valid glucose reading.");
+    return;
+  }
+
+  var d = new Date();
+  var timeStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  var dateStr = getTodayStr();
+
+  var logs = loadData(GLUCOSE_LOGS_KEY, []);
+  logs.unshift({
+    id: Date.now(),
+    date: dateStr,
+    time: timeStr,
+    value: value,
+    type: type,
+    tags: [...selectedGlucoseTags]
+  });
+
+  saveData(GLUCOSE_LOGS_KEY, logs);
+
+  // Reset Input
+  document.getElementById('input-glucose').value = "";
+  selectedGlucoseTags = [];
+  document.querySelectorAll('#glucose-tags .tag-pill').forEach(function(p) {
+    p.classList.remove('active');
+  });
+
+  calculateGlucoseStats();
+  renderTrendsTab();
+}
+
+function calculateGlucoseStats() {
+  var logs = loadData(GLUCOSE_LOGS_KEY, []);
+  var todayStr = getTodayStr();
+
+  var todayLogs = logs.filter(function(log) { return log.date === todayStr; });
+
+  var latestEl = document.getElementById('gl-latest');
+  var avgEl = document.getElementById('gl-avg');
+  var highEl = document.getElementById('gl-high');
+  var lowEl = document.getElementById('gl-low');
+  var trendEl = document.getElementById('gl-trend');
+
+  if (logs.length > 0) {
+    latestEl.textContent = logs[0].value.toFixed(1) + " mmol/L";
+  } else {
+    latestEl.textContent = "-- mmol/L";
+  }
+
+  if (todayLogs.length > 0) {
+    var values = todayLogs.map(function(log) { return log.value; });
+    var sum = values.reduce(function(a, b) { return a + b; }, 0);
+    var avg = sum / values.length;
+    var high = Math.max(...values);
+    var low = Math.min(...values);
+
+    avgEl.textContent = avg.toFixed(1) + " mmol/L";
+    highEl.textContent = high.toFixed(1) + " mmol/L";
+    lowEl.textContent = low.toFixed(1) + " mmol/L";
+
+    // Basic trend analysis based on recent 2 readings today
+    if (todayLogs.length >= 2) {
+      var diff = todayLogs[0].value - todayLogs[1].value; 
+      if (Math.abs(diff) < 0.3) {
+        trendEl.textContent = "Stable ➡️";
+        trendEl.style.color = "var(--ok)";
+      } else if (diff >= 0.3) {
+        trendEl.textContent = "Rising ↗️";
+        trendEl.style.color = "var(--danger)";
+      } else {
+        trendEl.textContent = "Falling ↘️";
+        trendEl.style.color = "var(--accent)";
+      }
+    } else {
+      trendEl.textContent = "Calculating... (need > 1 log)";
+      trendEl.style.color = "var(--muted)";
+    }
+
+  } else {
+    avgEl.textContent = "-- mmol/L";
+    highEl.textContent = "-- mmol/L";
+    lowEl.textContent = "-- mmol/L";
+    trendEl.textContent = "--";
+    trendEl.style.color = "var(--muted)";
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   BODY METRICS LOGGING
+══════════════════════════════════════════════════════════ */
+function saveHealthMetrics() {
+  var weight = parseFloat(document.getElementById('input-weight').value);
+  var waist = parseFloat(document.getElementById('input-waist').value);
+  var notes = document.getElementById('input-health-notes').value;
+
+  if (isNaN(weight) && isNaN(waist)) {
+    alert("Please enter either a weight or waist measurement.");
+    return;
+  }
+
+  var logs = loadData(HEALTH_LOGS_KEY, []);
+  var dateStr = getTodayStr();
+
+  // Find index if already logged today
+  var idx = logs.findIndex(function(log) { return log.date === dateStr; });
+  var entry = {
+    date: dateStr,
+    weight: isNaN(weight) ? null : weight,
+    waist: isNaN(waist) ? null : waist,
+    notes: notes || ""
+  };
+
+  if (idx > -1) {
+    logs[idx] = entry;
+  } else {
+    logs.unshift(entry);
+  }
+
+  saveData(HEALTH_LOGS_KEY, logs);
+
+  document.getElementById('input-weight').value = "";
+  document.getElementById('input-waist').value = "";
+  document.getElementById('input-health-notes').value = "";
+
+  renderTrendsTab();
+}
+
+/* ══════════════════════════════════════════════════════════
+   PERSONAL BESTS / ACHIEVEMENTS
+══════════════════════════════════════════════════════════ */
+function addPersonalBest() {
+  var input = document.getElementById('input-pb-title');
+  var text = (input ? input.value : '').trim();
+  if (!text) return;
+
+  var pbs = loadData(PB_KEY, []);
+  pbs.unshift({
+    id: Date.now(),
+    text: text,
+    date: getTodayStr()
+  });
+
+  saveData(PB_KEY, pbs);
+  input.value = "";
+  renderTrendsTab();
+}
+
+function deletePB(id) {
+  var pbs = loadData(PB_KEY, []);
+  pbs = pbs.filter(function(pb) { return pb.id !== id; });
+  saveData(PB_KEY, pbs);
+  renderTrendsTab();
+}
+
+/* ══════════════════════════════════════════════════════════
+   TRENDS RENDER LOGIC
+══════════════════════════════════════════════════════════ */
+function renderTrendsTab() {
+  // Render physical activity last 7 days
+  var renderTarget = document.getElementById('weekly-trends-render');
+  if (!renderTarget) return;
+
+  var logs = loadData(DAILY_LOGS_KEY, {});
+  var h = '';
+
+  for (var i = 0; i < 7; i++) {
+    var checkDate = new Date();
+    checkDate.setDate(checkDate.getDate() - i);
+    var year = checkDate.getFullYear();
+    var month = String(checkDate.getMonth() + 1).padStart(2, '0');
+    var day = String(checkDate.getDate()).padStart(2, '0');
+    var dateStr = year + '-' + month + '-' + day;
+
+    var log = logs[dateStr];
+    var checkedIn = log && log.checkIn;
+    var habitsDone = 0;
+    var stepsVal = log && log.steps ? log.steps + " steps" : "";
+    var distanceVal = log && log.distance ? log.distance + " km" : "";
+
+    if (log && log.habits) {
+      habitsDone = Object.values(log.habits).filter(Boolean).length;
+    }
+
+    h += `<div class="history-item">
+      <div class="history-item-details">
+        <span class="history-item-title">${formatDateDisplay(dateStr)} ${i === 0 ? '(Today)' : ''}</span>
+        <span class="history-item-meta">
+          ${checkedIn ? '✅ Logged Daily Check-in' : '❌ No Check-in'} &bull; ${habitsDone}/5 Habits Done
+        </span>
+      </div>
+      <div class="history-item-val" style="text-align: right; font-size:12px;">
+        ${stepsVal ? stepsVal + '<br>' : ''}
+        ${distanceVal ? distanceVal : ''}
+      </div>
+    </div>`;
+  }
+  renderTarget.innerHTML = h;
+
+  // Render Glucose History List
+  var glLogs = loadData(GLUCOSE_LOGS_KEY, []);
+  var glList = document.getElementById('glucose-history-list');
+  if (glList) {
+    if (glLogs.length === 0) {
+      glList.innerHTML = `<div style="font-size:13px; color:var(--muted); text-align:center; padding:10px;">No historical glucose logs found.</div>`;
+    } else {
+      glList.innerHTML = glLogs.map(function(l) {
+        return `<div class="history-item">
+          <div class="history-item-details">
+            <span class="history-item-title">${l.value.toFixed(1)} mmol/L (${l.type})</span>
+            <span class="history-item-meta">${formatDateDisplay(l.date)} at ${l.time} ${l.tags && l.tags.length > 0 ? '&bull; ['+l.tags.join(', ')+']' : ''}</span>
+          </div>
+          <button onclick="deleteGlucoseItem(${l.id})" style="background:none; border:none; color:var(--danger); cursor:pointer;">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Render Health Weight History List
+  var hLogs = loadData(HEALTH_LOGS_KEY, []);
+  var hList = document.getElementById('health-history-list');
+  if (hList) {
+    if (hLogs.length === 0) {
+      hList.innerHTML = `<div style="font-size:13px; color:var(--muted); text-align:center; padding:10px;">No historical health logs found.</div>`;
+    } else {
+      hList.innerHTML = hLogs.map(function(l) {
+        return `<div class="history-item">
+          <div class="history-item-details">
+            <span class="history-item-title">
+              ${l.weight ? l.weight + ' kg' : ''} ${l.weight && l.waist ? ' &bull; ' : ''} ${l.waist ? l.waist + ' cm waist' : ''}
+            </span>
+            <span class="history-item-meta">${formatDateDisplay(l.date)} ${l.notes ? '&bull; ' + l.notes : ''}</span>
+          </div>
+          <button onclick="deleteHealthItem('${l.date}')" style="background:none; border:none; color:var(--danger); cursor:pointer;">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Render PBs
+  var pbList = document.getElementById('pb-list');
+  var pbs = loadData(PB_KEY, []);
+  if (pbList) {
+    if (pbs.length === 0) {
+      pbList.innerHTML = `<div style="font-size:13px; color:var(--muted); text-align:center; padding:10px;">No achievements added yet. Log some PBs, legend.</div>`;
+    } else {
+      pbList.innerHTML = pbs.map(function(pb) {
+        return `<div class="history-item">
+          <div class="history-item-details">
+            <span class="history-item-title">🏆 ${pb.text}</span>
+            <span class="history-item-meta">Achieved on ${formatDateDisplay(pb.date)}</span>
+          </div>
+          <button onclick="deletePB(${pb.id})" style="background:none; border:none; color:var(--danger); cursor:pointer;">🗑️</button>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function deleteGlucoseItem(id) {
+  var logs = loadData(GLUCOSE_LOGS_KEY, []);
+  logs = logs.filter(function(l) { return l.id !== id; });
+  saveData(GLUCOSE_LOGS_KEY, logs);
+  calculateGlucoseStats();
+  renderTrendsTab();
+}
+
+function deleteHealthItem(dateStr) {
+  var logs = loadData(HEALTH_LOGS_KEY, []);
+  logs = logs.filter(function(l) { return l.date !== dateStr; });
+  saveData(HEALTH_LOGS_KEY, logs);
+  renderTrendsTab();
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESET & REBOOT COMMANDS
+══════════════════════════════════════════════════════════ */
+function clearAllData() {
+  if (confirm("Are you sure you want to clear all your fitness logs, glucose historical data, achievements and configurations? This cannot be undone.")) {
+    localStorage.removeItem(DAILY_LOGS_KEY);
+    localStorage.removeItem(GLUCOSE_LOGS_KEY);
+    localStorage.removeItem(HEALTH_LOGS_KEY);
+    localStorage.removeItem(ROSTER_KEY);
+    localStorage.removeItem(PB_KEY);
+    alert("Data cleared. App will now reload.");
+    window.location.reload();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   APP INITIALISATION
+══════════════════════════════════════════════════════════ */
+(function() {
+  var splash = document.getElementById('splash');
+  var appWrap = document.getElementById('app-wrapper');
+  
+  // Prepare components
+  selectDailyMessage();
+  renderRosterBadge();
+  updateCheckInUI();
+  updateHabitsUI();
+  loadDailyMetricsUI();
+  calculateDashboard();
+  calculateGlucoseStats();
+
+  setTimeout(function() {
+    splash.classList.add('fade-out');
+    appWrap.classList.add('visible');
+    setTimeout(function() { splash.style.display = 'none'; }, 650);
+  }, 2000);
+})();
+</script>
+</body>
+</html>
